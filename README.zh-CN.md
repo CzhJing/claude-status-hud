@@ -33,19 +33,6 @@ cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 
 安装后，在 Claude Code 中运行 `/setup-status-hud` 命令即可自动完成配置。
 
-也可以手动在 `~/.claude/settings.json` 中添加：
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node \"~/.claude/plugins/cache/claude-status-hud/claude-status-hud/1.0.0/scripts/statusline.js\""
-  }
-}
-```
-
-> 请将路径替换为实际的插件安装路径。运行 `/setup-status-hud` 可自动检测。
-
 ## 环境要求
 
 - **Claude Code** v2.1+（需支持 statusLine 功能）

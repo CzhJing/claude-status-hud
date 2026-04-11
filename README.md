@@ -34,19 +34,6 @@ In a Claude Code session, run the following commands in order:
 
 After installing, run the `/setup-status-hud` command inside Claude Code to auto-configure.
 
-Or manually add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node \"~/.claude/plugins/cache/claude-status-hud/claude-status-hud/1.0.0/scripts/statusline.js\""
-  }
-}
-```
-
-> Replace the path with your actual plugin install path. Run `/setup-status-hud` to auto-detect it.
-
 ## Requirements
 
 - **Claude Code** v2.1+ (with statusLine support)
