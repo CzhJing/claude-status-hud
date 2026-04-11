@@ -4,19 +4,18 @@
 
 Claude Code 富信息三行状态栏插件。跨平台，零依赖。
 
-![Status HUD 预览](https://github.com/BeiShan/claude-status-hud/raw/main/assets/preview.png)
-
+![Status HUD 预览](preview-line.png)
 ## 显示内容
 
 ```
 Model:Opus 4  version:v2.1.101  context:[████░░░░░░░░░░░] 28%  token[⬆ 468/⬇ 6.1k] | cache[R:53.0k W:2.2k]
-⎇ feat/my-branch*  project:my-project
+project:my-project | ⎇ feat/my-branch* | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
 cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 ```
 
 **第一行：** 模型名称、版本号、上下文窗口使用进度条（颜色随用量变化）、输入/输出 token 数、缓存读写统计
 
-**第二行：** Git 分支名、未提交修改标识（`*`）、领先/落后上游提交数（`↑2 ↓1`）、项目名称
+**第二行：** 项目名称、Git 分支名、未提交修改标识（`*`）、领先/落后上游提交数（`↑2 ↓1`）、活跃 MCP 服务器数、已安装 Skills 数、CLI 命令数、Hooks 数
 
 **第三行：** 会话费用（美元）、总耗时、API 耗时、新增/删除行数
 

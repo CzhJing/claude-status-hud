@@ -3,6 +3,8 @@
 
 const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // ── ANSI Colors ──────────────────────────────────────────────
 const RESET = '\x1b[0m';
@@ -59,6 +61,32 @@ function execGit(cmd, cwd) {
   } catch {
     return '';
   }
+}
+
+function findFiles(dir, filename) {
+  let count = 0;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) count += findFiles(full, filename);
+      else if (e.name === filename) count++;
+    }
+  } catch {}
+  return count;
+}
+
+function findMdFiles(dir) {
+  let count = 0;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) count += findMdFiles(full);
+      else if (e.name.endsWith('.md')) count++;
+    }
+  } catch {}
+  return count;
 }
 
 // ── Main ─────────────────────────────────────────────────────
@@ -128,8 +156,15 @@ function main() {
 
   const line1 = `${DIM}Model:${RESET}${CYAN}${BOLD}${model}${RESET}  ${DIM}version:${RESET}${DIM}v${version}${RESET}  ${barStr}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET} ${DIM}|${RESET} ${DIM}cache[${RESET}${CYAN}R:${cacheRFmt}${RESET} ${CYAN}W:${cacheCFmt}${RESET}${DIM}]${RESET}`;
 
-  // ── Line 2: Git + Project ──────────────────────────────────
+  // ── Line 2: Project + Git + MCPs/Skills/CLIs/Hooks ─────────
   let line2 = '';
+
+  if (projectDir) {
+    const projName = projectDir.split(/[/\\]/).filter(Boolean).pop() || '';
+    if (projName) {
+      line2 = `${DIM}project:${RESET}${BLUE}${BOLD}${projName}${RESET}`;
+    }
+  }
 
   const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd);
   if (branch) {
@@ -156,15 +191,70 @@ function main() {
       if (behind > 0) ab += `${RED}\u2193${behind}${RESET}`;
     }
 
-    line2 = `${MAGENTA}${BOLD}\u2387 ${branch}${RESET}${dirty}${ab ? ' ' + ab : ''}`;
+    if (line2) line2 += ` ${DIM}|${RESET} `;
+    line2 += `${MAGENTA}${BOLD}\u2387 ${branch}${RESET}${dirty}${ab ? ' ' + ab : ''}`;
   }
 
-  if (projectDir) {
-    const projName = projectDir.split(/[/\\]/).filter(Boolean).pop() || '';
-    if (projName) {
-      line2 += `  ${DIM}project:${RESET}${BLUE}${BOLD}${projName}${RESET}`;
+  // ── Count MCPs / Skills / CLIs / Hooks ─────────────────────
+  const claudeHome = path.join(os.homedir(), '.claude');
+
+  // MCPs: from mcp-health-cache.json (reflects all active MCP servers)
+  let mcpCount = 0;
+  try {
+    const mcpCache = JSON.parse(fs.readFileSync(path.join(claudeHome, 'mcp-health-cache.json'), 'utf8'));
+    mcpCount = Object.keys(mcpCache.servers || {}).length;
+  } catch {}
+
+  // Skills / CLIs / Hooks: from installed plugins
+  let skillCount = 0;
+  let cliCount = 0;
+  let hookCount = 0;
+
+  const installedPath = path.join(claudeHome, 'plugins', 'installed_plugins.json');
+  try {
+    const installed = JSON.parse(fs.readFileSync(installedPath, 'utf8'));
+    for (const entries of Object.values(installed.plugins || {})) {
+      const p = entries[0] && entries[0].installPath;
+      if (!p) continue;
+      // Count skills
+      try {
+        skillCount += findFiles(path.join(p, 'skills'), 'SKILL.md');
+      } catch {}
+      // Count commands
+      try {
+        cliCount += findMdFiles(path.join(p, 'commands'));
+      } catch {}
+      // Count hooks
+      try {
+        const hooksFile = path.join(p, 'hooks', 'hooks.json');
+        const hooksData = JSON.parse(fs.readFileSync(hooksFile, 'utf8'));
+        for (const arr of Object.values(hooksData.hooks || {})) {
+          hookCount += Array.isArray(arr) ? arr.length : 0;
+        }
+      } catch {}
     }
+  } catch {}
+
+  // Hooks from global settings
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(claudeHome, 'settings.json'), 'utf8'));
+    for (const arr of Object.values(settings.hooks || {})) {
+      hookCount += Array.isArray(arr) ? arr.length : 0;
+    }
+  } catch {}
+
+  // Hooks from project settings
+  if (projectDir) {
+    try {
+      const projSettingsDir = projectDir.replace(/^\//, '').replace(/\//g, '-');
+      const projSettings = JSON.parse(fs.readFileSync(path.join(claudeHome, 'projects', projSettingsDir, 'settings.json'), 'utf8'));
+      for (const arr of Object.values(projSettings.hooks || {})) {
+        hookCount += Array.isArray(arr) ? arr.length : 0;
+      }
+    } catch {}
   }
+
+  line2 += ` ${DIM}|${RESET} ${CYAN}${mcpCount} Mcps${RESET} ${DIM}|${RESET} ${GREEN}${skillCount} Skills${RESET} ${DIM}|${RESET} ${YELLOW}${cliCount} Clis${RESET} ${DIM}|${RESET} ${MAGENTA}${hookCount} Hooks${RESET}`;
 
   // ── Line 3: Cost + Duration + Lines ────────────────────────
   const costFmt = formatCost(costUsd);
