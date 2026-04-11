@@ -4,7 +4,7 @@
 
 Rich 3-line status HUD for Claude Code. Cross-platform, zero dependencies.
 
-![Status HUD Preview](preview-1.png)
+![Status HUD Preview](preview-2.png)
 
 ## What it shows
 
