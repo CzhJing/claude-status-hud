@@ -34,19 +34,6 @@ In a Claude Code session, run the following commands in order:
 
 After installing, run the `/setup-status-hud` command inside Claude Code to auto-configure.
 
-Or manually add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node \"~/.claude/plugins/cache/claude-status-hud/claude-status-hud/1.0.0/scripts/statusline.js\""
-  }
-}
-```
-
-> Replace the path with your actual plugin install path. Run `/setup-status-hud` to auto-detect it.
-
 ## Requirements
 
 - **Claude Code** v2.1+ (with statusLine support)
@@ -55,13 +42,9 @@ Or manually add to `~/.claude/settings.json`:
 
 ## No external dependencies
 
-This plugin uses only Node.js built-in modules. No `jq`, no `npm install`, no additional tools.
+This plugin uses only Node.js built-in modules. no additional tools.
 
 Works on **macOS**, **Linux**, and **Windows**.
-
-## Migrating from a jq-based statusline script
-
-If you were using a bash statusline script that depends on `jq`, this plugin replaces it entirely. The output is visually identical but no longer requires `brew install jq` or any external tool.
 
 ## License
 

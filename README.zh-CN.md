@@ -33,19 +33,6 @@ cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 
 安装后，在 Claude Code 中运行 `/setup-status-hud` 命令即可自动完成配置。
 
-也可以手动在 `~/.claude/settings.json` 中添加：
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node \"~/.claude/plugins/cache/claude-status-hud/claude-status-hud/1.0.0/scripts/statusline.js\""
-  }
-}
-```
-
-> 请将路径替换为实际的插件安装路径。运行 `/setup-status-hud` 可自动检测。
-
 ## 环境要求
 
 - **Claude Code** v2.1+（需支持 statusLine 功能）
@@ -54,13 +41,9 @@ cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 
 ## 零外部依赖
 
-本插件仅使用 Node.js 内置模块，无需 `jq`，无需 `npm install`，无需安装任何额外工具。
+本插件仅使用 Node.js 内置模块，无需安装任何额外工具。
 
 支持 **macOS**、**Linux** 和 **Windows**。
-
-## 从 jq 版本迁移
-
-如果你之前使用的是依赖 `jq` 的 bash 状态栏脚本，本插件可以完全替代它。输出效果完全一致，但不再需要 `brew install jq` 或其他外部工具。
 
 ## 许可证
 
