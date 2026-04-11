@@ -1,0 +1,15 @@
+{
+  "name": "claude-status-hud",
+  "owner": {
+    "name": "BeiShan",
+    "url": "https://github.com/CzhJing"
+  },
+  "plugins": [
+    {
+      "name": "claude-status-hud",
+      "source": "./",
+      "description": "Rich 3-line status HUD for Claude Code: model info, context window bar, token counts, cache stats, git status, cost, duration, MCPs, skills, CLIs, and hooks.",
+      "version": "1.0.0"
+    }
+  ]
+}

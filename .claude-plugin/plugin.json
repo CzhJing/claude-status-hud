@@ -5,8 +5,8 @@
   "author": {
     "name": "BeiShan"
   },
-  "repository": "https://github.com/BeiShan/claude-status-hud",
-  "homepage": "https://github.com/BeiShan/claude-status-hud",
+  "repository": "https://github.com/CzhJing/claude-status-hud",
+  "homepage": "https://github.com/CzhJing/claude-status-hud",
   "license": "MIT",
   "keywords": [
     "statusline",
