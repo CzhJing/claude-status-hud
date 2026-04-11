@@ -1,0 +1,17 @@
+{
+  "name": "claude-status-hud",
+  "version": "1.0.0",
+  "description": "Rich 3-line status HUD plugin for Claude Code",
+  "author": "BeiShan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BeiShan/claude-status-hud"
+  },
+  "keywords": [
+    "claude-code",
+    "statusline",
+    "plugin"
+  ],
+  "private": true
+}

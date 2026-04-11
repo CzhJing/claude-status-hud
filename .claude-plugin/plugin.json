@@ -1,0 +1,21 @@
+{
+  "name": "claude-status-hud",
+  "version": "1.0.0",
+  "description": "Rich 3-line status HUD for Claude Code: model info, context window bar, token counts, cache stats, git status, cost, and duration. Cross-platform, zero dependencies.",
+  "author": {
+    "name": "BeiShan"
+  },
+  "repository": "https://github.com/BeiShan/claude-status-hud",
+  "homepage": "https://github.com/BeiShan/claude-status-hud",
+  "license": "MIT",
+  "keywords": [
+    "statusline",
+    "status-hud",
+    "dashboard",
+    "context-window",
+    "tokens",
+    "cost",
+    "git"
+  ],
+  "skills": ["./skills/"]
+}
