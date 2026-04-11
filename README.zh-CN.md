@@ -41,13 +41,9 @@ cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 
 ## 零外部依赖
 
-本插件仅使用 Node.js 内置模块，无需 `jq`，无需 `npm install`，无需安装任何额外工具。
+本插件仅使用 Node.js 内置模块，无需安装任何额外工具。
 
 支持 **macOS**、**Linux** 和 **Windows**。
-
-## 从 jq 版本迁移
-
-如果你之前使用的是依赖 `jq` 的 bash 状态栏脚本，本插件可以完全替代它。输出效果完全一致，但不再需要 `brew install jq` 或其他外部工具。
 
 ## 许可证
 

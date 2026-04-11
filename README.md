@@ -42,13 +42,9 @@ After installing, run the `/setup-status-hud` command inside Claude Code to auto
 
 ## No external dependencies
 
-This plugin uses only Node.js built-in modules. No `jq`, no `npm install`, no additional tools.
+This plugin uses only Node.js built-in modules. no additional tools.
 
 Works on **macOS**, **Linux**, and **Windows**.
-
-## Migrating from a jq-based statusline script
-
-If you were using a bash statusline script that depends on `jq`, this plugin replaces it entirely. The output is visually identical but no longer requires `brew install jq` or any external tool.
 
 ## License
 
