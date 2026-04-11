@@ -4,21 +4,21 @@
 
 Rich 3-line status HUD for Claude Code. Cross-platform, zero dependencies.
 
-![Status HUD Preview](preview-line.png)
+![Status HUD Preview](preview-1.png)
 
 ## What it shows
 
 ```
-Model:Opus 4  version:v2.1.101  context:[████░░░░░░░░░░░] 28%  token[⬆ 468/⬇ 6.1k] | cache[R:53.0k W:2.2k]
-project:my-project | ⎇ feat/my-branch* | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
-cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
+Model:Opus 4 ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
+project:my-project | ⎇ feat/my-branch* | update:+126 | delete:-16
+cost: $1.84  🕐: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
 ```
 
-**Line 1:** Model name, version, context window usage bar (color-coded), input/output tokens, cache read/write stats
+**Line 1:** Model name, context window usage bar (color-coded), rate limit usage bars with reset countdown (5h / 7d). Shows "For subscribers only" when usage data is unavailable
 
-**Line 2:** Project name, git branch, dirty indicator (`*`), ahead/behind upstream (`↑2 ↓1`), active MCP servers, installed skills, CLI commands, hooks
+**Line 2:** Project name, git branch, dirty indicator (`*`), ahead/behind upstream (`↑2 ↓1`), lines added/removed
 
-**Line 3:** Session cost (USD), wall clock duration, API duration, lines added/removed
+**Line 3:** Session cost (USD), wall clock duration, API duration, input/output tokens, active MCP servers, installed skills, CLI commands, hooks
 
 ## Install
 
