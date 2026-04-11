@@ -30,6 +30,17 @@ In a Claude Code session, run the following commands in order:
 /reload-plugins
 ```
 
+## Update
+
+To update the plugin to the latest version:
+
+```
+/plugin update claude-status-hud
+/reload-plugins
+```
+
+Then re-run `/setup-status-hud` if the status line is not displaying correctly.
+
 ## Setup
 
 After installing, run the `/setup-status-hud` command inside Claude Code to auto-configure.

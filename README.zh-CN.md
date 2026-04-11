@@ -29,6 +29,17 @@ cost: $1.84  🕐: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skil
 /reload-plugins
 ```
 
+## 更新
+
+更新插件到最新版本：
+
+```
+/plugin update claude-status-hud
+/reload-plugins
+```
+
+如果状态栏未正常显示，请重新运行 `/setup-status-hud`。
+
 ## 配置
 
 安装后，在 Claude Code 中运行 `/setup-status-hud` 命令即可自动完成配置。
