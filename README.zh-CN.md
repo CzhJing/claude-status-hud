@@ -21,8 +21,12 @@ cost: $1.84  🕐: 6m11s(2m57s api)  update:+126|delete:-16
 
 ## 安装
 
-```bash
-claude plugin add github:BeiShan/claude-status-hud
+在 Claude Code 会话中依次执行：
+
+```
+/plugin marketplace add CzhJing/claude-status-hud
+/plugin install claude-status-hud
+/reload-plugins
 ```
 
 ## 配置
