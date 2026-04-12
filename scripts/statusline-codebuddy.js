@@ -4,7 +4,7 @@
 const {
   get, path, fs, os,
   readStdin, parseInput,
-  renderLine1, renderLine2, renderLine3,
+  renderLine1, renderLine2, renderLine3, renderLine3NoPlugins,
   countPlugins, renderExtraLines
 } = require('./lib');
 
@@ -16,8 +16,8 @@ function main() {
   if (!data) return;
 
   // ── Parse fields ───────────────────────────────────────────
-  const envHome = path.join(os.homedir(), '.claude');
-  const model = get(data, 'model.display_name', 'Claude');
+  const envHome = path.join(os.homedir(), '.codebuddy');
+  const model = get(data, 'model.display_name', 'Codebuddy');
   const used = get(data, 'context_window.used_percentage', null);
 
   const totalIn = get(data, 'context_window.total_input_tokens', 0);
@@ -39,16 +39,15 @@ function main() {
 
   const sessionId = get(data, 'session_id', '');
 
-  // ── Count plugins (Claude Code: check both ~/.claude and ~/.codebuddy) ──
-  const homeDirs = [envHome];
-  const altHome = path.join(os.homedir(), '.codebuddy');
-  if (fs.existsSync(altHome)) homeDirs.push(altHome);
-  const { mcpCount, skillCount, cliCount, hookCount } = countPlugins(homeDirs, projectDir);
+  // ── Count plugins (Codebuddy: only ~/.codebuddy) ──────────
+  const { mcpCount, skillCount, cliCount, hookCount, hasPluginData } = countPlugins([envHome], projectDir);
 
   // ── Render ─────────────────────────────────────────────────
-  const line1 = renderLine1(model, used, usage5h, usage7d, resets5h, resets7d);
+  const line1 = renderLine1(model, used, usage5h, usage7d, resets5h, resets7d, 'N/A');
   const line2 = renderLine2(projectDir, cwd, linesAdded, linesRemoved);
-  const line3 = renderLine3(costUsd, durationMs, apiDurationMs, totalIn, totalOut, mcpCount, skillCount, cliCount, hookCount);
+  const line3 = hasPluginData
+    ? renderLine3(costUsd, durationMs, apiDurationMs, totalIn, totalOut, mcpCount, skillCount, cliCount, hookCount)
+    : renderLine3NoPlugins(costUsd, durationMs, apiDurationMs, totalIn, totalOut);
   const extraLines = renderExtraLines(envHome, sessionId);
 
   const output = [line1, line2, line3];
