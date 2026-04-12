@@ -31,16 +31,6 @@ todo:[█████░░░░░]3/6 (50%) ▸ Fix edge case
 
 ## Install
 
-### Claude Code
-
-In a Claude Code session, run the following commands in order:
-
-```
-/plugin marketplace add CzhJing/claude-status-hud
-/plugin install claude-status-hud
-/reload-plugins
-```
-
 ### `Claude Code` or `Codebuddy Code`
 
 In a `Claude Code` or `Codebuddy Code` session, run the same commands:
