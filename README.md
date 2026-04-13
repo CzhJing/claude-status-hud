@@ -11,7 +11,7 @@ Rich status HUD for Claude Code & Codebuddy Code. Cross-platform, zero dependenc
 ```
 Model:Opus 4 ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
 project:my-project | ⎇ feat/my-branch* | update:+126 | delete:-16
-cost: $1.84  🕐: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
+cost: $1.84  ⏱︎: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
 tools:Read×2, Edit
 agent:cli, Explore ● running
 todo:[█████░░░░░]3/6 (50%) ▸ Fix edge case

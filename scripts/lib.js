@@ -201,7 +201,7 @@ function renderLine3(costUsd, durationMs, apiDurationMs, totalIn, totalOut, mcpC
 
   const pluginsPart = ` ${DIM}|${RESET} ${CYAN}${mcpCount} Mcps${RESET} ${DIM}|${RESET} ${GREEN}${skillCount} Skills${RESET} ${DIM}|${RESET} ${YELLOW}${cliCount} Clis${RESET} ${DIM}|${RESET} ${MAGENTA}${hookCount} Hooks${RESET}`;
 
-  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  \uD83D\uDD50${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}${pluginsPart}`;
+  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}${pluginsPart}`;
 }
 
 function renderLine3NoPlugins(costUsd, durationMs, apiDurationMs, totalIn, totalOut) {
@@ -211,7 +211,7 @@ function renderLine3NoPlugins(costUsd, durationMs, apiDurationMs, totalIn, total
   const inFmt = formatTokens(totalIn);
   const outFmt = formatTokens(totalOut);
 
-  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  \uD83D\uDD50${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}`;
+  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}`;
 }
 
 function countPlugins(homeDirs, projectDir) {
@@ -265,121 +265,286 @@ function countPlugins(homeDirs, projectDir) {
   return { mcpCount, skillCount, cliCount, hookCount, hasPluginData };
 }
 
+function readJsonFile(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function toTimestamp(value) {
+  if (value == null || value === '') return null;
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveSessionTraceContext(envHome, sessionId) {
+  if (!sessionId) return null;
+
+  const sessionsDir = path.join(envHome, 'sessions');
+  const sessionEntries = [];
+
+  try {
+    const sessionFiles = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.json')).sort();
+    for (const sessionFile of sessionFiles) {
+      const sessionData = readJsonFile(path.join(sessionsDir, sessionFile));
+      if (!sessionData || sessionData.pid == null) continue;
+
+      sessionEntries.push({
+        sessionId: String(sessionData.sessionId || sessionData.session_id || ''),
+        pid: String(sessionData.pid),
+        startedAt: toTimestamp(sessionData.startedAt || sessionData.started_at)
+      });
+    }
+  } catch {
+    return null;
+  }
+
+  const currentSession = sessionEntries.find(entry => entry.sessionId === sessionId);
+  if (!currentSession) return null;
+
+  let nextSessionStartedAt = null;
+  if (currentSession.startedAt !== null) {
+    for (const entry of sessionEntries) {
+      if (entry.pid !== currentSession.pid) continue;
+      if (entry.sessionId === currentSession.sessionId) continue;
+      if (entry.startedAt === null || entry.startedAt <= currentSession.startedAt) continue;
+      if (nextSessionStartedAt === null || entry.startedAt < nextSessionStartedAt) {
+        nextSessionStartedAt = entry.startedAt;
+      }
+    }
+  }
+
+  return {
+    traceDir: path.join(envHome, 'traces', currentSession.pid),
+    sessionStartedAt: currentSession.startedAt,
+    nextSessionStartedAt
+  };
+}
+
+function traceMatchesSession(traceData, sessionId, sessionStartedAt, nextSessionStartedAt) {
+  const candidates = [
+    get(traceData, 'sessionId', null),
+    get(traceData, 'session_id', null),
+    get(traceData, 'trace.sessionId', null),
+    get(traceData, 'trace.session_id', null),
+    get(traceData, 'trace.session.id', null),
+    get(traceData, 'trace.metadata.sessionId', null),
+    get(traceData, 'trace.metadata.session_id', null),
+    get(traceData, 'metadata.sessionId', null),
+    get(traceData, 'metadata.session_id', null)
+  ];
+
+  let hasExplicitSessionId = false;
+  for (const value of candidates) {
+    if (value == null || value === '') continue;
+    hasExplicitSessionId = true;
+    if (String(value) === sessionId) return true;
+  }
+
+  if (hasExplicitSessionId || sessionStartedAt === null) return false;
+
+  const traceStartedAt = toTimestamp(get(traceData, 'trace.startedAt', get(traceData, 'startedAt', null)));
+  if (traceStartedAt === null || traceStartedAt < sessionStartedAt) return false;
+  if (nextSessionStartedAt !== null && traceStartedAt >= nextSessionStartedAt) return false;
+  return true;
+}
+
+function getTraceSpans(traceData) {
+  if (Array.isArray(traceData.spans)) return traceData.spans;
+
+  const nestedSpans = get(traceData, 'trace.spans', null);
+  return Array.isArray(nestedSpans) ? nestedSpans : [];
+}
+
+function shouldIncludeTrace(traceData, nowMs) {
+  const endedAtMs = toTimestamp(get(traceData, 'trace.endedAt', get(traceData, 'endedAt', null)));
+  return endedAtMs === null || nowMs - endedAtMs <= 60000;
+}
+
+function readSessionTraceSummary(envHome, sessionId) {
+  const summary = {
+    toolCounts: {},
+    agentNames: [],
+    hasRunningAgent: false
+  };
+
+  const traceContext = resolveSessionTraceContext(envHome, sessionId);
+  if (!traceContext || !fs.existsSync(traceContext.traceDir)) return summary;
+
+  const nowMs = Date.now();
+  const seenAgents = new Set();
+
+  try {
+    const traceFiles = fs.readdirSync(traceContext.traceDir).filter(f => f.endsWith('.json')).sort();
+    for (const traceFile of traceFiles) {
+      const traceData = readJsonFile(path.join(traceContext.traceDir, traceFile));
+      if (!traceData) continue;
+      if (!traceMatchesSession(traceData, sessionId, traceContext.sessionStartedAt, traceContext.nextSessionStartedAt)) continue;
+      if (!shouldIncludeTrace(traceData, nowMs)) continue;
+
+      const spans = getTraceSpans(traceData);
+      for (const span of spans) {
+        if (!span || typeof span !== 'object') continue;
+
+        if (span.type === 'function') {
+          const toolNameValue = span.toolName || span.name;
+          const toolName = typeof toolNameValue === 'string' ? toolNameValue.trim() : '';
+          if (!toolName) continue;
+          summary.toolCounts[toolName] = (summary.toolCounts[toolName] || 0) + 1;
+        }
+
+        if (span.type === 'agent') {
+          if (!span.endedAt) summary.hasRunningAgent = true;
+
+          const agentNameValue = span.agentName || span.name;
+          const agentName = typeof agentNameValue === 'string' ? agentNameValue.trim() : '';
+          if (!agentName || seenAgents.has(agentName)) continue;
+          seenAgents.add(agentName);
+          summary.agentNames.push(agentName);
+        }
+      }
+    }
+  } catch {}
+
+  return summary;
+}
+
+function getTaskNumericId(taskData, fileName) {
+  const candidates = [taskData && taskData.id, path.basename(fileName, '.json')];
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim();
+    if (/^\d+$/.test(value)) return Number(value);
+  }
+  return null;
+}
+
+function getTaskSortTimestamp(taskData) {
+  const candidates = [
+    taskData && taskData.updatedAt,
+    taskData && taskData.updated_at,
+    taskData && taskData.createdAt,
+    taskData && taskData.created_at
+  ];
+
+  for (const candidate of candidates) {
+    const timestamp = toTimestamp(candidate);
+    if (timestamp !== null) return timestamp;
+  }
+
+  return null;
+}
+
+function compareTaskRecords(a, b) {
+  if (a.numericId !== null || b.numericId !== null) {
+    if (a.numericId !== null && b.numericId !== null && a.numericId !== b.numericId) {
+      return a.numericId - b.numericId;
+    }
+    if (a.numericId !== null) return -1;
+    if (b.numericId !== null) return 1;
+  }
+
+  if (a.sortTimestamp !== null || b.sortTimestamp !== null) {
+    if (a.sortTimestamp !== null && b.sortTimestamp !== null && a.sortTimestamp !== b.sortTimestamp) {
+      return a.sortTimestamp - b.sortTimestamp;
+    }
+    if (a.sortTimestamp !== null) return -1;
+    if (b.sortTimestamp !== null) return 1;
+  }
+
+  return a.fileName.localeCompare(b.fileName);
+}
+
+function readSessionTasks(envHome, sessionId) {
+  if (!sessionId) return [];
+
+  const tasksDir = path.join(envHome, 'tasks', sessionId);
+  if (!fs.existsSync(tasksDir)) return [];
+
+  const tasks = [];
+  try {
+    const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.json'));
+    for (const taskFile of taskFiles) {
+      const taskData = readJsonFile(path.join(tasksDir, taskFile));
+      if (!taskData || typeof taskData !== 'object') continue;
+
+      const subject = typeof taskData.subject === 'string' ? taskData.subject.trim() : '';
+      const status = typeof taskData.status === 'string' ? taskData.status : '';
+      if (status !== 'completed' && status !== 'in_progress' && status !== 'pending') continue;
+
+      tasks.push({
+        fileName: taskFile,
+        numericId: getTaskNumericId(taskData, taskFile),
+        sortTimestamp: getTaskSortTimestamp(taskData),
+        status,
+        subject
+      });
+    }
+  } catch {}
+
+  return tasks.sort(compareTaskRecords);
+}
+
+function renderTodoLine(tasks) {
+  if (tasks.length === 0) return null;
+
+  let completed = 0;
+  let inProgress = 0;
+  for (const task of tasks) {
+    if (task.status === 'completed') completed++;
+    else if (task.status === 'in_progress') inProgress++;
+  }
+
+  const total = tasks.length;
+  const pct = Math.round(completed * 100 / total);
+  const todoBarW = 10;
+  const todoFilled = Math.round(pct * todoBarW / 100);
+  const todoEmpty = todoBarW - todoFilled;
+  const todoColor = pct === 100 ? GREEN : pct >= 50 ? YELLOW : RED;
+  const todoBar = todoColor + '\u2588'.repeat(todoFilled) + DIM + '\u2591'.repeat(todoEmpty) + RESET;
+
+  let todoStr = `${DIM}todo:${RESET}[${todoBar}]${DIM}${completed}/${total}${RESET} ${DIM}(${pct}%)${RESET}`;
+  const activeTask = tasks.find(task => task.status === 'in_progress' && task.subject);
+  if (inProgress > 0 && activeTask) {
+    const subject = activeTask.subject.length > 30
+      ? activeTask.subject.substring(0, 27) + '...'
+      : activeTask.subject;
+    todoStr += ` ${YELLOW}\u25b8${RESET} ${subject}`;
+  }
+
+  return todoStr;
+}
+
 function renderExtraLines(envHome, sessionId) {
   const extraLines = [];
 
-  // --- Active Tools & Agent Status (from traces) ---
-  try {
-    let traceDir = null;
-    const sessionsDir = path.join(envHome, 'sessions');
-    try {
-      const sessionFiles = fs.readdirSync(sessionsDir);
-      for (const sf of sessionFiles) {
-        if (!sf.endsWith('.json')) continue;
-        try {
-          const sd = JSON.parse(fs.readFileSync(path.join(sessionsDir, sf), 'utf8'));
-          if (sd.sessionId === sessionId) {
-            traceDir = path.join(envHome, 'traces', String(sd.pid));
-            break;
-          }
-        } catch {}
-      }
-    } catch {}
+  const { toolCounts, agentNames, hasRunningAgent } = readSessionTraceSummary(envHome, sessionId);
 
-    if (traceDir && fs.existsSync(traceDir)) {
-      const traceFiles = fs.readdirSync(traceDir).filter(f => f.endsWith('.json'));
-      const toolCounts = {};
-      const activeTools = [];
-      const agentNames = [];
-      let hasActiveTrace = false;
+  if (Object.keys(toolCounts).length > 0) {
+    const sortedTools = Object.entries(toolCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const toolStr = sortedTools.map(([name, count]) =>
+      count > 1 ? `${CYAN}${name}${RESET}${DIM}\u00d7${count}${RESET}` : `${CYAN}${name}${RESET}`
+    ).join(`${DIM},${RESET} `);
+    extraLines.push(`${DIM}tools:${RESET}${toolStr}`);
+  }
 
-      for (const tf of traceFiles) {
-        try {
-          const td = JSON.parse(fs.readFileSync(path.join(traceDir, tf), 'utf8'));
-          const trace = td.trace || {};
-          const spans = td.spans || [];
+  if (agentNames.length > 0) {
+    const agentStr = agentNames.map(a => {
+      if (a === 'cli') return `${GREEN}cli${RESET}`;
+      if (a === 'cli-silent') return `${DIM}cli-silent${RESET}`;
+      return `${MAGENTA}${a}${RESET}`;
+    }).join(`${DIM},${RESET} `);
+    const statusLabel = hasRunningAgent ? `${YELLOW}\u25cf running${RESET}` : `${GREEN}\u25cf idle${RESET}`;
+    extraLines.push(`${DIM}agent:${RESET}${agentStr} ${statusLabel}`);
+  }
 
-          const isRunning = !trace.endedAt;
-          if (isRunning) hasActiveTrace = true;
-
-          if (!isRunning) {
-            const endedMs = new Date(trace.endedAt).getTime();
-            if (Date.now() - endedMs > 60000) continue;
-          }
-
-          for (const span of spans) {
-            if (span.type === 'function') {
-              const name = span.toolName || span.name;
-              toolCounts[name] = (toolCounts[name] || 0) + 1;
-              if (!span.endedAt && !activeTools.includes(name)) {
-                activeTools.push(name);
-              }
-            }
-            if (span.type === 'agent' && span.agentName) {
-              if (!agentNames.includes(span.agentName)) {
-                agentNames.push(span.agentName);
-              }
-            }
-          }
-        } catch {}
-      }
-
-      if (Object.keys(toolCounts).length > 0) {
-        const sortedTools = Object.entries(toolCounts).sort((a, b) => b[1] - a[1]);
-        const toolStr = sortedTools.map(([name, count]) =>
-          count > 1 ? `${CYAN}${name}${RESET}${DIM}\u00d7${count}${RESET}` : `${CYAN}${name}${RESET}`
-        ).join(`${DIM},${RESET} `);
-        extraLines.push(`${DIM}tools:${RESET}${toolStr}`);
-      }
-
-      if (agentNames.length > 0) {
-        const agentStr = agentNames.map(a => {
-          if (a === 'cli') return `${GREEN}cli${RESET}`;
-          if (a === 'cli-silent') return `${DIM}cli-silent${RESET}`;
-          return `${MAGENTA}${a}${RESET}`;
-        }).join(`${DIM},${RESET} `);
-        const statusLabel = hasActiveTrace ? `${YELLOW}\u25cf running${RESET}` : `${GREEN}\u25cf idle${RESET}`;
-        extraLines.push(`${DIM}agent:${RESET}${agentStr} ${statusLabel}`);
-      }
-    }
-  } catch {}
-
-  // --- Todo Progress (from tasks) ---
-  try {
-    const tasksDir = path.join(envHome, 'tasks', sessionId);
-    if (fs.existsSync(tasksDir)) {
-      const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.json'));
-      let total = 0, completed = 0, inProgress = 0;
-      const pendingSubjects = [];
-      for (const tf of taskFiles) {
-        try {
-          const td = JSON.parse(fs.readFileSync(path.join(tasksDir, tf), 'utf8'));
-          total++;
-          if (td.status === 'completed') completed++;
-          else if (td.status === 'in_progress') {
-            inProgress++;
-            if (td.subject) pendingSubjects.push(td.subject);
-          }
-        } catch {}
-      }
-      if (total > 0) {
-        const pct = Math.round(completed * 100 / total);
-        const todoBarW = 10;
-        const todoFilled = Math.round(pct * todoBarW / 100);
-        const todoEmpty = todoBarW - todoFilled;
-        const todoColor = pct === 100 ? GREEN : pct >= 50 ? YELLOW : RED;
-        const todoBar = todoColor + '\u2588'.repeat(todoFilled) + DIM + '\u2591'.repeat(todoEmpty) + RESET;
-        let todoStr = `${DIM}todo:${RESET}[${todoBar}]${DIM}${completed}/${total}${RESET} ${DIM}(${pct}%)${RESET}`;
-        if (inProgress > 0 && pendingSubjects.length > 0) {
-          const subject = pendingSubjects[0].length > 30
-            ? pendingSubjects[0].substring(0, 27) + '...'
-            : pendingSubjects[0];
-          todoStr += ` ${YELLOW}\u25b8${RESET} ${subject}`;
-        }
-        extraLines.push(todoStr);
-      }
-    }
-  } catch {}
+  const todoLine = renderTodoLine(readSessionTasks(envHome, sessionId));
+  if (todoLine) extraLines.push(todoLine);
 
   return extraLines;
 }
