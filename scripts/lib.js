@@ -121,7 +121,7 @@ function renderLine1(model, used, usage5h, usage7d, resets5h, resets7d, fallback
     barStr = `${DIM}ctx:${RESET}[${DIM}${'\u2591'.repeat(BAR_WIDTH)}${RESET}]`;
   }
 
-  let line1 = `${DIM}Model:${RESET}${CYAN}${BOLD}${model}${RESET} ${barStr}`;
+  let line1 = `${CYAN}${BOLD}[${model}]${RESET} ${barStr}`;
 
   function makeUsageBar(pct, label, resetsAt) {
     const w = 6;
@@ -148,46 +148,82 @@ function renderLine1(model, used, usage5h, usage7d, resets5h, resets7d, fallback
   return line1;
 }
 
+const GIT_CACHE_TTL_MS = 5000;
+
+function getGitCacheFile(cwd) {
+  // Use last 40 chars of sanitized cwd as suffix to keep per-repo caches separate
+  const suffix = cwd.replace(/[^a-zA-Z0-9]/g, '_').slice(-40);
+  return path.join(os.tmpdir(), `statusline-git-cache-${suffix}`);
+}
+
+function readGitCache(cacheFile) {
+  try {
+    const stat = fs.statSync(cacheFile);
+    if (Date.now() - stat.mtimeMs < GIT_CACHE_TTL_MS) {
+      return JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+    }
+  } catch {}
+  return null;
+}
+
+function fetchGitInfo(cwd) {
+  const result = { branch: '', stagedCount: 0, modifiedCount: 0, ahead: 0, behind: 0 };
+
+  const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd);
+  if (!branch) return result;
+  result.branch = branch;
+
+  try {
+    const statusOut = execSync('git status --porcelain', { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    if (statusOut) {
+      for (const line of statusOut.split('\n')) {
+        if (!line) continue;
+        const x = line[0];
+        const y = line[1];
+        if (x !== ' ' && x !== '?') result.stagedCount++;
+        if (y !== ' ' && y !== '?') result.modifiedCount++;
+      }
+    }
+  } catch {}
+
+  const upstream = execGit('git rev-parse --abbrev-ref @{upstream}', cwd);
+  if (upstream) {
+    result.ahead = parseInt(execGit(`git rev-list --count ${upstream}..HEAD`, cwd), 10) || 0;
+    result.behind = parseInt(execGit(`git rev-list --count HEAD..${upstream}`, cwd), 10) || 0;
+  }
+
+  return result;
+}
+
+function getGitInfo(cwd) {
+  const cacheFile = getGitCacheFile(cwd);
+  const cached = readGitCache(cacheFile);
+  if (cached) return cached;
+
+  const info = fetchGitInfo(cwd);
+  try { fs.writeFileSync(cacheFile, JSON.stringify(info)); } catch {}
+  return info;
+}
+
 function renderLine2(projectDir, cwd, linesAdded, linesRemoved) {
   let line2 = '';
 
   if (projectDir) {
     const projName = projectDir.split(/[/\\]/).filter(Boolean).pop() || '';
     if (projName) {
-      line2 = `${DIM}project:${RESET}${BLUE}${BOLD}${projName}${RESET}`;
+      line2 = `\uD83D\uDCC1 ${BLUE}${BOLD}${projName}${RESET}`;
     }
   }
 
-  const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd);
+  const { branch, stagedCount, modifiedCount, ahead, behind } = getGitInfo(cwd);
   if (branch) {
-    let dirty = '';
-    try {
-      execSync('git diff --quiet', { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    } catch {
-      dirty = `${YELLOW}*${RESET}`;
-    }
-    if (!dirty) {
-      try {
-        execSync('git diff --cached --quiet', { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-      } catch {
-        dirty = `${YELLOW}*${RESET}`;
-      }
-    }
-
     let ab = '';
-    const upstream = execGit('git rev-parse --abbrev-ref @{upstream}', cwd);
-    if (upstream) {
-      const ahead = parseInt(execGit(`git rev-list --count ${upstream}..HEAD`, cwd), 10) || 0;
-      const behind = parseInt(execGit(`git rev-list --count HEAD..${upstream}`, cwd), 10) || 0;
-      if (ahead > 0) ab += `${GREEN}\u2191${ahead}${RESET}`;
-      if (behind > 0) ab += `${RED}\u2193${behind}${RESET}`;
-    }
+    if (ahead > 0) ab += `${GREEN}\u2191${ahead}${RESET}`;
+    if (behind > 0) ab += `${RED}\u2193${behind}${RESET}`;
 
     if (line2) line2 += ` ${DIM}|${RESET} `;
-    line2 += `${MAGENTA}${BOLD}\u2387 ${branch}${RESET}${dirty}${ab ? ' ' + ab : ''}`;
+    line2 += `${MAGENTA}${BOLD}\u2387 ${branch}${RESET}${ab ? ' ' + ab : ''} ${GREEN}+${stagedCount}${RESET} ${YELLOW}~${modifiedCount}${RESET}`;
   }
-
-  line2 += ` ${DIM}|${RESET} ${DIM}update:${RESET}${GREEN}+${linesAdded}${RESET} ${DIM}|${RESET} ${DIM}delete:${RESET}${RED}-${linesRemoved}${RESET}`;
 
   return line2;
 }
@@ -201,7 +237,7 @@ function renderLine3(costUsd, durationMs, apiDurationMs, totalIn, totalOut, mcpC
 
   const pluginsPart = ` ${DIM}|${RESET} ${CYAN}${mcpCount} Mcps${RESET} ${DIM}|${RESET} ${GREEN}${skillCount} Skills${RESET} ${DIM}|${RESET} ${YELLOW}${cliCount} Clis${RESET} ${DIM}|${RESET} ${MAGENTA}${hookCount} Hooks${RESET}`;
 
-  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}${pluginsPart}`;
+  return `\uD83D\uDCB0${DIM}:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}${pluginsPart}`;
 }
 
 function renderLine3NoPlugins(costUsd, durationMs, apiDurationMs, totalIn, totalOut) {
@@ -211,7 +247,7 @@ function renderLine3NoPlugins(costUsd, durationMs, apiDurationMs, totalIn, total
   const inFmt = formatTokens(totalIn);
   const outFmt = formatTokens(totalOut);
 
-  return `${DIM}cost:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}`;
+  return `\uD83D\uDCB0${DIM}:${RESET} ${WHITE}${BOLD}${costFmt}${RESET}  ⏱︎${DIM}:${RESET} ${durFmt}${DIM}(${apiFmt} api)${RESET}  ${DIM}token[${RESET}${GREEN}\u2B06 ${inFmt}${RESET}${DIM}/${RESET}${YELLOW}\u2B07 ${outFmt}${RESET}${DIM}]${RESET}`;
 }
 
 function countPlugins(homeDirs, projectDir) {

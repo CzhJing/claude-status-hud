@@ -9,19 +9,19 @@ Rich status HUD for Claude Code & Codebuddy Code. Cross-platform, zero dependenc
 ## What it shows
 
 ```
-Model:Opus 4 ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
-project:my-project | ⎇ feat/my-branch* | update:+126 | delete:-16
-cost: $1.84  ⏱︎: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
+[Opus 4] ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
+📁 my-project | ⎇ feat/my-branch ↑2 +3 ~1
+💰: $1.84  ⏱︎: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
 tools:Read×2, Edit
 agent:cli, Explore ● running
 todo:[█████░░░░░]3/6 (50%) ▸ Fix edge case
 ```
 
-**Line 1:** Model name, context window usage bar (color-coded: green <50%, yellow <80%, red >=80%), rate limit usage bars with reset countdown (5h / 7d). Shows "For subscribers only" when usage data is unavailable
+**Line 1:** Model name (in `[brackets]`), context window usage bar (color-coded: green <50%, yellow <80%, red >=80%), rate limit usage bars with reset countdown (5h / 7d). Shows "For subscribers only" when usage data is unavailable
 
-**Line 2:** Project name, git branch, dirty indicator (`*`), ahead/behind upstream (`↑2 ↓1`), lines added/removed
+**Line 2:** Project name (📁), git branch (⎇), ahead/behind upstream (`↑2 ↓1`), staged file count (`+N`), modified file count (`~N`)
 
-**Line 3:** Session cost (USD), wall clock duration, API duration, input/output tokens, active MCP servers, installed skills, CLI commands, hooks
+**Line 3:** Session cost (💰), wall clock duration, API duration, input/output tokens, active MCP servers, installed skills, CLI commands, hooks
 
 **Line 4:** Active tools and call counts (e.g. `Read×2, Edit`) — only shown when tools are running or recently used
 
