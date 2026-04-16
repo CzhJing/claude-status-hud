@@ -9,7 +9,7 @@
       "name": "claude-status-hud",
       "source": "./",
       "description": "Rich status HUD for Claude Code: model info, context window bar, token counts, cache stats, git status, cost, duration, MCPs, skills, CLIs, and hooks.",
-      "version": "1.2.0"
+      "version": "1.4.0"
     }
   ]
 }
