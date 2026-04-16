@@ -8,19 +8,19 @@ Claude Code & Codebuddy Code 富信息状态栏插件。跨平台，零依赖。
 ## 显示内容
 
 ```
-Model:Opus 4 ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
-project:my-project | ⎇ feat/my-branch* | update:+126 | delete:-16
-cost: $1.84  ⏱︎: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
+[Opus 4] ctx:[████░░░░░░]28% | usage:[████░░]75% (2h29m / 5h)|[█░░░░░]12% (3d11h / 7d)
+📁 my-project | ⎇ feat/my-branch ↑2 +3 ~1
+💰: $1.84  ⏱︎: 6m11s(2m57s api)  token[⬆ 468/⬇ 6.1k] | 3 Mcps | 174 Skills | 75 Clis | 32 Hooks
 tools:Read×2, Edit
 agent:cli, Explore ● running
 todo:[█████░░░░░]3/6 (50%) ▸ Fix edge case
 ```
 
-**第一行：** 模型名称、上下文窗口使用进度条（颜色随用量变化：绿色 <50%、黄色 <80%、红色 >=80%）、速率限额进度条及重置倒计时（5h / 7d）。无订阅时显示 "For subscribers only"
+**第一行：** 模型名称（用 `[方括号]` 包裹）、上下文窗口使用进度条（颜色随用量变化：绿色 <50%、黄色 <80%、红色 >=80%）、速率限额进度条及重置倒计时（5h / 7d）。无订阅时显示 "For subscribers only"
 
-**第二行：** 项目名称、Git 分支名、未提交修改标识（`*`）、领先/落后上游提交数（`↑2 ↓1`）、新增/删除行数
+**第二行：** 项目名称（📁）、Git 分支名（⎇）、领先/落后上游提交数（`↑2 ↓1`）、已暂存文件数（`+N`）、已修改未暂存文件数（`~N`）
 
-**第三行：** 会话费用（美元）、总耗时、API 耗时、输入/输出 token 数、活跃 MCP 服务器数、已安装 Skills 数、CLI 命令数、Hooks 数
+**第三行：** 会话费用（💰）、总耗时、API 耗时、输入/输出 token 数、活跃 MCP 服务器数、已安装 Skills 数、CLI 命令数、Hooks 数
 
 | codeBuddy无法显示以下内容
 
